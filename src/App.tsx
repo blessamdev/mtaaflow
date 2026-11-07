@@ -1284,7 +1284,11 @@ function Checkout({
                 <span />
               )}
               {step < 4 ? (
-                <button className="rounded-full bg-[#172b25] px-6 py-3.5 text-xs font-extrabold text-white">
+                <button
+                  type="button"
+                  onClick={() => next()}
+                  className="rounded-full bg-[#172b25] px-6 py-3.5 text-xs font-extrabold text-white"
+                >
                   Continue
                 </button>
               ) : (
@@ -2681,7 +2685,7 @@ function OrderConfirmation({
     <div className="min-h-screen bg-[#f4f5f1]">
       <header className="border-b border-black/5 bg-white">
         <div className="mx-auto flex h-[70px] max-w-[1000px] items-center justify-between px-5">
-          <Logo onClick={() => {}} />
+          <Logo onClick={onContinue} />
           <div className="flex gap-2">
             <button onClick={onContinue} className="text-[10px] font-bold">
               Continue shopping
@@ -2850,6 +2854,10 @@ export default function App() {
     notify(`Order updated to ${s.toLowerCase()}`);
   };
   useEffect(() => {
+    if (confirmation) {
+      document.title = "Order confirmed — MtaaFlow";
+      return;
+    }
     const titles: Record<View, string> = {
       home: "MtaaFlow — Social commerce for Kenyan small businesses",
       store: "Urban Threads KE — City collection on MtaaFlow",
