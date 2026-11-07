@@ -1,0 +1,113 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-width: 320px;
+    background: #fbfaf6;
+    color: #172b25;
+    font-family: "Manrope", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: #dcebcf;
+    color: #172b25;
+  }
+
+  button,
+  a {
+    cursor: pointer;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 3px solid rgba(232, 116, 60, 0.35);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    color: #d95f2d;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .section-title {
+    margin-top: 0.9rem;
+    max-width: 760px;
+    color: #172b25;
+    font-size: clamp(2.25rem, 5vw, 3.75rem);
+    font-weight: 800;
+    letter-spacing: -0.055em;
+    line-height: 1.07;
+  }
+
+  .section-copy {
+    margin-top: 1.35rem;
+    max-width: 620px;
+    color: #68766f;
+    font-size: 1.05rem;
+    line-height: 1.8;
+  }
+
+  .field {
+    width: 100%;
+    border: 1px solid rgba(23, 43, 37, 0.14);
+    border-radius: 0.8rem;
+    background: white;
+    padding: 0.8rem 0.9rem;
+    color: #172b25;
+    font-size: 0.82rem;
+  }
+
+  .field:focus {
+    border-color: #3d7558;
+  }
+
+  .label {
+    color: #495a53;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.fixed.bottom-5.left-1\/2.z-\[100\] {
+  animation: toast-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .section-copy {
+    font-size: 0.95rem;
+  }
+}
