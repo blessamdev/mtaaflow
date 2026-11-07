@@ -187,6 +187,13 @@ function Icon({
         <path d="m20 20-4-4" />
       </>
     ),
+    truck: (
+      <>
+        <path d="M1 18h4l1-2h6l1 2h4a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v3H1z" />
+        <circle cx="5" cy="18" r="1" />
+        <circle cx="17" cy="18" r="1" />
+      </>
+    ),
     share: (
       <>
         <circle cx="18" cy="5" r="2" />
@@ -783,10 +790,18 @@ function ProductModal({
               </button>
             </div>
             <p className="mt-5 text-sm leading-6 text-[#66746d]">{product.description}</p>
-            <p className="mt-4 flex items-center gap-2 text-xs font-bold text-[#3b714f]">
-              <span className="h-2 w-2 rounded-full bg-[#55a66e]" /> In stock • {product.stock}{" "}
-              available
+            <p className="mt-4 flex items-center gap-2 text-xs font-bold">
+              <span className={`h-2 w-2 rounded-full ${product.stock <= 5 ? "bg-[#e8743c]" : "bg-[#55a66e]"}`} />
+              {product.stock <= 5 ? "Low stock — only " : "In stock — "}
+              {product.stock}
+              {" "}
+              {product.stock === 1 ? "item left" : "items available"}
             </p>
+            {product.stock <= 5 && (
+              <p className="mt-1 rounded-xl bg-[#fff0e8] px-3 py-2 text-xs font-bold text-[#bd562b]">
+                Limited availability — order soon.
+              </p>
+            )}
             <div className="mt-7">
               <div className="flex justify-between">
                 <b className="text-xs">Select size</b>
@@ -841,6 +856,17 @@ function ProductModal({
                 <button onClick={() => setQty(Math.min(product.stock, qty + 1))}>
                   <Icon name="plus" size={14} />
                 </button>
+              </div>
+            </div>
+            <div className="mt-6 rounded-xl border border-black/10 p-3">
+              <div className="flex items-start gap-2">
+                <Icon name="truck" size={14} className="mt-0.5 text-[#3d7558]" />
+                <div className="text-sm">
+                  <b className="block">Delivery &amp; collection</b>
+                  <p className="text-[10px] text-[#748079]">
+                    Nairobi delivery available • Collect from our Kilimani store • Free pickup
+                  </p>
+                </div>
               </div>
             </div>
             {error && (
@@ -998,11 +1024,30 @@ function Checkout({
   const [delivery, setDelivery] = useState<"Delivery" | "Store pickup">("Delivery");
   const [address, setAddress] = useState("Kilimani, Nairobi");
   const [payment, setPayment] = useState<"M-Pesa" | "Pay on delivery">("M-Pesa");
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const total =
     items.reduce((s, x) => s + products.find((p) => p.id === x.productId)!.price * x.qty, 0) +
     (delivery === "Delivery" ? 250 : 0);
+  const validateStep = (): boolean => {
+    const nextErrors: Record<string, string> = {};
+    if (step === 2) {
+      if (!customer.name.trim()) nextErrors.name = "Full name is required.";
+      if (!customer.phone.trim()) nextErrors.phone = "Phone number is required.";
+      if (!customer.location.trim()) nextErrors.location = "Town or area is required.";
+      if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+        nextErrors.email = "Enter a valid email address.";
+      }
+    } else if (step === 3 && delivery === "Delivery" && !address.trim()) {
+      nextErrors.address = "Delivery address is required.";
+    }
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
   const next = (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (!validateStep()) {
+      return;
+    }
     setStep(Math.min(4, step + 1));
     window.scrollTo(0, 0);
   };
@@ -1049,6 +1094,7 @@ function Checkout({
                       >
                         <img
                           src={p.images[0]}
+                          loading="lazy"
                           className="h-20 w-16 rounded-xl object-cover object-top"
                           alt=""
                         />
@@ -1074,40 +1120,77 @@ function Checkout({
                 </p>
                 <div className="mt-7 grid gap-4 sm:grid-cols-2">
                   <label className="label sm:col-span-2">
-                    Full name
+                    <span className="flex items-baseline gap-1">
+                      Full name<span className="text-[#bd562b] font-normal">*</span>
+                    </span>
                     <input
                       required
+                      aria-required="true"
+                      aria-invalid={!!errors.name}
                       className="field mt-2"
                       value={customer.name}
-                      onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                      onChange={(e) => {
+                        setCustomer({ ...customer, name: e.target.value });
+                        if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
+                      }}
                     />
+                    {errors.name && (
+                      <p className="mt-1 text-[9px] font-bold text-[#bd562b]">{errors.name}</p>
+                    )}
                   </label>
                   <label className="label">
-                    Phone number
+                    <span className="flex items-baseline gap-1">
+                      Phone number<span className="text-[#bd562b] font-normal">*</span>
+                    </span>
                     <input
                       required
+                      aria-required="true"
+                      aria-invalid={!!errors.phone}
                       className="field mt-2"
                       value={customer.phone}
-                      onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                      onChange={(e) => {
+                        setCustomer({ ...customer, phone: e.target.value });
+                        if (errors.phone) setErrors((p) => ({ ...p, phone: undefined }));
+                      }}
                     />
+                    {errors.phone && (
+                      <p className="mt-1 text-[9px] font-bold text-[#bd562b]">{errors.phone}</p>
+                    )}
                   </label>
                   <label className="label">
                     Email (optional)
                     <input
                       type="email"
+                      aria-invalid={!!errors.email}
                       className="field mt-2"
                       value={customer.email}
-                      onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+                      onChange={(e) => {
+                        setCustomer({ ...customer, email: e.target.value });
+                        if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
+                      }}
                     />
+                    {errors.email && (
+                      <p className="mt-1 text-[9px] font-bold text-[#bd562b]">{errors.email}</p>
+                    )}
                   </label>
                   <label className="label sm:col-span-2">
-                    Town or area
+                    <span className="flex items-baseline gap-1">
+                      Town or area<span className="text-[#bd562b] font-normal">*</span>
+                    </span>
                     <input
                       required
+                      aria-required="true"
+                      aria-invalid={!!errors.location}
                       className="field mt-2"
                       value={customer.location}
-                      onChange={(e) => setCustomer({ ...customer, location: e.target.value })}
+                      onChange={(e) => {
+                        setCustomer({ ...customer, location: e.target.value });
+                        if (errors.location) setErrors((p) => ({ ...p, location: undefined }));
+                      }}
                     />
+                    {errors.location && (
+                      <p className="mt-1 text-[9px] font-bold text-[#bd562b]">{errors.location}</p>
+                    )}
                   </label>
                 </div>
               </>
@@ -1135,13 +1218,23 @@ function Checkout({
                 </div>
                 {delivery === "Delivery" && (
                   <label className="label mt-5 block">
-                    Delivery address
+                    <span className="flex items-baseline gap-1">
+                      Delivery address<span className="text-[#bd562b] font-normal">*</span>
+                    </span>
                     <input
                       required
+                      aria-required="true"
+                      aria-invalid={!!errors.address}
                       className="field mt-2"
                       value={address}
-                      onChange={(e) => setAddress(e.target.value)}
+                      onChange={(e) => {
+                        setAddress(e.target.value);
+                        if (errors.address) setErrors((p) => ({ ...p, address: undefined }));
+                      }}
                     />
+                    {errors.address && (
+                      <p className="mt-1 text-[9px] font-bold text-[#bd562b]">{errors.address}</p>
+                    )}
                   </label>
                 )}
               </>
@@ -1268,17 +1361,34 @@ function Store({
 }) {
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"featured" | "price-asc" | "price-desc" | "newest">("featured");
   const [cartOpen, setCartOpen] = useState(false);
   const [checkout, setCheckout] = useState(false);
-  const filtered = products.filter(
+  const baseFiltered = products.filter(
     (p) =>
       (category === "All" || p.category === category) &&
       p.name.toLowerCase().includes(search.toLowerCase()),
   );
+  const filtered = useMemo(() => {
+    let result = [...baseFiltered];
+    if (sort === "price-asc") result.sort((a, b) => a.price - b.price);
+    else if (sort === "price-desc") result.sort((a, b) => b.price - a.price);
+    else if (sort === "newest") result.sort((a, b) => b.id - a.id);
+    return result;
+  }, [baseFiltered, sort]);
+  const hasActiveFilters = search.trim() !== "" || category !== "All" || sort !== "featured";
   const share = (text: string) => {
     navigator.clipboard?.writeText(text);
     toast("Demo link copied to clipboard");
   };
+
+  const sortLabel = (s: (typeof sort)) => {
+    if (s === "price-asc") return "Price: low to high";
+    if (s === "price-desc") return "Price: high to low";
+    if (s === "newest") return "Newest first";
+    return "Featured";
+  };
+
   const add = (item: CartItem) => {
     setCart((c) => {
       const i = c.findIndex(
@@ -1380,7 +1490,67 @@ function Store({
             />
           </div>
         </div>
-        <div className="mt-7 flex gap-2 overflow-x-auto pb-2">
+        {hasActiveFilters && (
+          <div className="mt-6 flex flex-wrap gap-2 sm:gap-3">
+            {search.trim() !== "" && (
+              <button
+                onClick={() => setSearch("")}
+                className="flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-[9px] font-extrabold"
+              >
+                <span>“{search}”</span>
+                <Icon name="close" size={12} />
+              </button>
+            )}
+            {category !== "All" && (
+              <button
+                onClick={() => setCategory("All")}
+                className="flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-[9px] font-extrabold"
+              >
+                <span>{category}</span>
+                <Icon name="close" size={12} />
+              </button>
+            )}
+            {sort !== "featured" && (
+              <button
+                onClick={() => setSort("featured")}
+                className="flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-[9px] font-extrabold"
+              >
+                <span>{sortLabel(sort)}</span>
+                <Icon name="close" size={12} />
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setSearch("");
+                setCategory("All");
+                setSort("featured");
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-[9px] font-extrabold text-[#e06a38]"
+            >
+              Reset filters
+            </button>
+          </div>
+        )}
+        <div className="mt-7 flex gap-2 overflow-x-auto pb-2 sm:mt-6">
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] text-[#748079] leading-none mb-1">Sort by</p>
+            <div className="flex gap-1 overflow-x-auto">
+              {([
+                { id: "featured", label: "Featured" },
+                { id: "price-asc", label: "Price: low to high" },
+                { id: "price-desc", label: "Price: high to low" },
+                { id: "newest", label: "Newest first" },
+              ] as const).map((o) => (
+                <button
+                  key={o.id}
+                  onClick={() => setSort(o.id)}
+                  className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[9px] font-extrabold transition ${sort === o.id ? "border-[#172b25] bg-[#172b25] text-white" : "border-black/10 bg-white"}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
           {["All", ...new Set(products.map((p) => p.category))].map((c) => (
             <button
               key={c}
@@ -1401,6 +1571,7 @@ function Store({
                 >
                   <img
                     src={p.images[0]}
+                    loading="lazy"
                     className="h-full w-full object-cover object-top transition duration-500 group-hover:scale-105"
                     alt={p.name}
                   />
@@ -1440,17 +1611,23 @@ function Store({
             ))}
           </div>
         ) : (
-          <div className="mt-14 rounded-2xl bg-[#f3f4f0] p-10 text-center">
-            <b>No products found</b>
-            <p className="mt-2 text-xs text-[#748079]">Try a different search or category.</p>
+          <div className="mt-14 rounded-2xl bg-[#f3f4f0] p-12 sm:p-16 text-center">
+            <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#edf1e9] mb-4">
+              <Icon name="search" size={20} />
+            </span>
+            <b className="block text-sm">No products found</b>
+            <p className="mt-2 text-xs text-[#748079]">
+              Try a different search term, category, or sorting option.
+            </p>
             <button
               onClick={() => {
                 setSearch("");
                 setCategory("All");
+                setSort("featured");
               }}
-              className="mt-4 text-xs font-bold underline"
+              className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-black/10 px-3.5 py-1.5 text-[9px] font-extrabold text-[#e06a38]"
             >
-              Clear filters
+              Reset filters <Icon name="close" size={12} />
             </button>
           </div>
         )}
@@ -1631,6 +1808,7 @@ function Analytics() {
             <div key={p.id} className="flex items-center gap-3 rounded-xl bg-[#f5f6f2] p-3">
               <img
                 src={p.images[0]}
+                loading="lazy"
                 className="h-12 w-10 rounded-lg object-cover object-top"
                 alt=""
               />
@@ -1659,6 +1837,7 @@ function Studio({
 }) {
   const [page, setPage] = useState<StudioPage>("Overview");
   const [filter, setFilter] = useState<Status | "ALL">("ALL");
+  const [orderSearch, setOrderSearch] = useState("");
   const [selected, setSelected] = useState(order?.ref || "MF-2047");
   const [mobileNav, setMobileNav] = useState(false);
   useEffect(() => {
@@ -1677,7 +1856,12 @@ function Studio({
       }
     : null;
   const rows = [...(newRow ? [newRow] : []), ...seededOrders].filter(
-    (x) => filter === "ALL" || x.status === filter,
+    (x) =>
+      (filter === "ALL" || x.status === filter) &&
+      (orderSearch === "" ||
+        x.ref.toLowerCase().includes(orderSearch.toLowerCase()) ||
+        x.name.toLowerCase().includes(orderSearch.toLowerCase()) ||
+        x.product.toLowerCase().includes(orderSearch.toLowerCase())),
   );
   const isNew = order && selected === order.ref;
   const nav: { n: StudioPage; i: string }[] = [
@@ -1864,6 +2048,19 @@ function Studio({
                     ),
                   )}
                 </div>
+                <div className="relative w-full lg:w-80">
+                  <Icon
+                    name="search"
+                    size={15}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#748079]"
+                  />
+                  <input
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    className="w-full rounded-full border border-black/10 bg-white pl-10 pr-4 py-2 text-xs"
+                    placeholder="Search orders..."
+                  />
+                </div>
               </div>
               <div className="mt-6 grid overflow-hidden rounded-[24px] bg-white shadow-sm xl:grid-cols-[1fr_370px]">
                 <div>
@@ -1889,8 +2086,13 @@ function Studio({
                   ))}
                   {rows.length === 0 && (
                     <div className="p-12 text-center">
+                      <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#edf1e9] mb-3">
+                        <Icon name="order" size={16} />
+                      </span>
                       <b>No matching orders</b>
-                      <p className="mt-2 text-xs text-[#748079]">Try another status filter.</p>
+                      <p className="mt-2 text-xs text-[#748079]">
+                        Try another status filter or search term.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1919,13 +2121,24 @@ function Studio({
             </div>
           ) : page === "Products" ? (
             <div>
-              <h1 className="text-3xl font-black">Products</h1>
-              <p className="mt-1 text-xs text-[#748079]">Demo catalogue inventory</p>
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                  <h1 className="text-3xl font-black">Products</h1>
+                  <p className="mt-1 text-xs text-[#748079]">Demo catalogue inventory</p>
+                </div>
+                {products.some((p) => p.stock <= 5) && (
+                  <div className="rounded-xl bg-[#fff0e8] px-4 py-3 text-[10px] leading-5 text-[#8d4a2d]">
+                    <b>Low stock warning:</b>{" "}
+                    {products.filter((p) => p.stock <= 5).length} product(s) running low.
+                  </div>
+                )}
+              </div>
               <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {products.map((p) => (
                   <div key={p.id} className="flex gap-3 rounded-2xl bg-white p-3">
                     <img
                       src={p.images[0]}
+                      loading="lazy"
                       className="h-20 w-16 rounded-xl object-cover object-top"
                       alt=""
                     />
@@ -1934,6 +2147,11 @@ function Studio({
                       <p className="mt-1 text-[9px] text-[#748079]">
                         {p.category} • {p.stock} in stock
                       </p>
+                      {p.stock <= 5 && (
+                        <p className="mt-1 text-[9px] font-bold text-[#bd562b]">
+                          Low stock — order soon
+                        </p>
+                      )}
                       <b className="mt-3 block text-[10px]">{money(p.price)}</b>
                     </div>
                   </div>
@@ -2444,6 +2662,154 @@ function Builder({ close, finish }: { close: () => void; finish: () => void }) {
   );
 }
 
+function OrderConfirmation({
+  order,
+  onTrack,
+  onContinue,
+}: {
+  order: DemoOrder;
+  onTrack: () => void;
+  onContinue: () => void;
+}) {
+  const total =
+    order.items.reduce(
+      (s, x) => s + products.find((p) => p.id === x.productId)!.price * x.qty,
+      0,
+    ) + (order.delivery === "Delivery" ? 250 : 0);
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="min-h-screen bg-[#f4f5f1]">
+      <header className="border-b border-black/5 bg-white">
+        <div className="mx-auto flex h-[70px] max-w-[1000px] items-center justify-between px-5">
+          <Logo onClick={() => {}} />
+          <div className="flex gap-2">
+            <button onClick={onContinue} className="text-[10px] font-bold">
+              Continue shopping
+            </button>
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-[800px] px-5 py-12 sm:py-20">
+        <div className="text-center">
+          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#e4f2d9] text-[#315f46] mb-4">
+            <Icon name="check" size={28} />
+          </span>
+          <p className="eyebrow">Order confirmed</p>
+          <h1 className="mt-3 text-4xl font-black tracking-[-.05em] sm:text-5xl">
+            Thank you, {order.customer.name.split(" ")[0]}.
+          </h1>
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-[#68766f]">
+            Your demonstration order {order.ref} has been placed with Urban Threads KE. The seller
+            will confirm your items and get in touch.
+          </p>
+        </div>
+        <div className="mt-10 rounded-[24px] bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex justify-between items-start border-b border-black/5 pb-6 sm:flex-row">
+            <div>
+              <small className="text-[#748079]">Order reference</small>
+              <h2 className="mt-1 text-xl font-black">{order.ref}</h2>
+              <p className="text-[10px] text-[#748079]">
+                Placed {order.created} • Status: <b>New</b>
+              </p>
+            </div>
+            <StatusPill status="NEW" />
+          </div>
+          <div className="mt-6">
+            <b className="text-xs block mb-3">Your order</b>
+            <div className="space-y-3">
+              {order.items.map((item) => {
+                const product = products.find((candidate) => candidate.id === item.productId)!;
+                return (
+                  <div key={`${product.id}-${item.size}-${item.color}`} className="flex items-center gap-3">
+                    <img
+                      src={product.images[0]}
+                      className="h-14 w-12 rounded-lg object-cover object-top"
+                      alt=""
+                    />
+                    <div className="min-w-0 flex-1">
+                      <b className="block truncate text-[10px]">{product.name}</b>
+                      <p className="text-[9px] text-[#748079]">
+                        {item.color} • Size {item.size} • Qty {item.qty}
+                      </p>
+                    </div>
+                    <b className="text-[10px]">{money(product.price * item.qty)}</b>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="mt-6 border-t border-black/5 pt-6">
+            <div className="flex justify-between text-xs mb-2">
+              <span className="text-[#748079]">Items subtotal</span>
+              <b>
+                {money(
+                  order.items.reduce(
+                    (s, x) => s + products.find((p) => p.id === x.productId)!.price * x.qty,
+                    0,
+                  ),
+                )}
+              </b>
+            </div>
+            <div className="flex justify-between text-xs text-white/60">
+              <span>Delivery</span>
+              <span>{order.delivery === "Delivery" ? "KSh 250" : "Free"}</span>
+            </div>
+            <div className="mt-3 flex justify-between font-black">
+              <span>Order total</span>
+              <b>{money(total)}</b>
+            </div>
+          </div>
+          <div className="mt-6 rounded-xl bg-[#f4f5f1] p-4 text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-[#748079]">Delivery</span>
+              <b className="text-right">{order.address}</b>
+            </div>
+            <div className="mt-2 flex justify-between">
+              <span className="text-[#748079]">Payment</span>
+              <b>{order.payment} • Demo pending</b>
+            </div>
+            <div className="mt-2 flex justify-between gap-5">
+              <span className="text-[#748079]">Customer</span>
+              <b className="text-right">{order.customer.name} • {order.customer.phone}</b>
+            </div>
+          </div>
+          <div className="mt-5 rounded-xl bg-[#fff0e8] p-4 text-[10px] leading-5 text-[#8d4a2d]">
+            <b>Demonstration only.</b> No payment is processed and no charge will be made. This is a
+            prototype storefront.
+          </div>
+          <button
+            onClick={() => {
+              navigator.clipboard?.writeText(
+                `Urban Threads KE demo order ${order.ref}\nTotal: ${money(total)}\nStatus: New\nTrack: ${order.ref}`,
+              );
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1800);
+            }}
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-black/10 py-3 text-[10px] font-bold"
+          >
+            <Icon name={copied ? "check" : "copy"} size={15} />
+            {copied ? "Order summary copied" : "Copy order summary"}
+          </button>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+            <button
+              onClick={onContinue}
+              className="flex-1 rounded-full border border-black/10 py-3 text-[10px] font-bold"
+            >
+              Continue shopping
+            </button>
+            <button
+              onClick={onTrack}
+              className="flex-1 rounded-full bg-[#172b25] py-3 text-[10px] font-bold text-white"
+            >
+              View order tracking
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState<View>("home");
   const [productId, setProductId] = useState<number | null>(null);
@@ -2452,6 +2818,7 @@ export default function App() {
   const [status, setStatusState] = useState<Status>("NEW");
   const [builder, setBuilder] = useState(false);
   const [toast, setToast] = useState("");
+  const [confirmation, setConfirmation] = useState(false);
   const notify = (s: string) => {
     setToast(s);
     window.setTimeout(() => setToast(""), 2400);
@@ -2475,7 +2842,7 @@ export default function App() {
     setOrder(next);
     setStatusState("NEW");
     setCart([]);
-    setView("tracking");
+    setConfirmation(true);
     notify("Demo order created and sent to Seller Studio");
   };
   const setStatus = (s: Status) => {
@@ -2483,34 +2850,59 @@ export default function App() {
     notify(`Order updated to ${s.toLowerCase()}`);
   };
   useEffect(() => {
-    document.title =
-      view === "home"
-        ? "MtaaFlow — Social commerce, organised"
-        : view === "store"
-          ? "Urban Threads KE"
-          : view === "studio"
-            ? "MtaaFlow Seller Studio"
-            : "Track your MtaaFlow order";
+    const titles: Record<View, string> = {
+      home: "MtaaFlow — Social commerce for Kenyan small businesses",
+      store: "Urban Threads KE — City collection on MtaaFlow",
+      studio: "MtaaFlow Seller Studio — Order management dashboard",
+      tracking: "Track your MtaaFlow order",
+    };
+    document.title = titles[view];
+    const meta = document.querySelector('meta[name="description"]');
+    const descriptions: Record<View, string> = {
+      home:
+        "Create an online storefront, share product links and turn social media attention into organised customer orders. MtaaFlow helps Kenyan small businesses sell online.",
+      store:
+        "Browse the Urban Threads KE collection — Kenyan streetwear with local delivery and Kilimani pickup. Shop the city drop on MtaaFlow.",
+      studio:
+        "Manage demonstration orders, products and customers in the MtaaFlow Seller Studio dashboard.",
+      tracking:
+        "Track your MtaaFlow demonstration order and see the same status the seller manages in Seller Studio.",
+    };
+    if (meta) meta.setAttribute("content", descriptions[view]);
   }, [view]);
   return (
     <>
-      {view === "home" ? (
-        <Landing go={go} builder={() => setBuilder(true)} />
-      ) : view === "store" ? (
-        <Store
-          go={go}
-          openProductId={productId}
-          clearProduct={() => setProductId(null)}
-          cart={cart}
-          setCart={setCart}
-          toast={notify}
-          submitOrder={submitOrder}
-        />
-      ) : view === "studio" ? (
-        <Studio go={go} order={order} status={status} setStatus={setStatus} />
-      ) : (
-        <Tracking go={go} order={order} status={status} />
-      )}
+      <div className="animate-[page-fade_400ms_ease-out]">
+        {confirmation && order ? (
+          <OrderConfirmation
+            order={order}
+            onTrack={() => {
+              setConfirmation(false);
+              setView("tracking");
+            }}
+            onContinue={() => {
+              setConfirmation(false);
+              setView("store");
+            }}
+          />
+        ) : view === "home" ? (
+          <Landing go={go} builder={() => setBuilder(true)} />
+        ) : view === "store" ? (
+          <Store
+            go={go}
+            openProductId={productId}
+            clearProduct={() => setProductId(null)}
+            cart={cart}
+            setCart={setCart}
+            toast={notify}
+            submitOrder={submitOrder}
+          />
+        ) : view === "studio" ? (
+          <Studio go={go} order={order} status={status} setStatus={setStatus} />
+        ) : (
+          <Tracking go={go} order={order} status={status} />
+        )}
+      </div>
       {builder && (
         <Builder
           close={() => setBuilder(false)}
