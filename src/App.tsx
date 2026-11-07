@@ -720,6 +720,7 @@ function ProductModal({
   const [color, setColor] = useState("");
   const [qty, setQty] = useState(1);
   const [error, setError] = useState("");
+  const [added, setAdded] = useState(false);
   const submit = () => {
     if (!size || !color) {
       setError(
@@ -728,6 +729,8 @@ function ProductModal({
       return;
     }
     add({ productId: product.id, size, color, qty });
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1400);
   };
   return (
     <>
@@ -849,7 +852,7 @@ function ProductModal({
               onClick={submit}
               className="sticky bottom-3 mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#172b25] py-4 text-sm font-extrabold text-white shadow-lg"
             >
-              Add to cart • {money(product.price * qty)}
+              {added ? "Added ✓" : `Add to cart • ${money(product.price * qty)}`}
             </button>
           </div>
         </div>
@@ -878,11 +881,11 @@ function CartDrawer({
   return (
     <>
       <button
-        className="fixed inset-0 z-50 bg-[#172b25]/45 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-[#172b25]/45 backdrop-blur-sm animate-[fade-in_180ms_ease-out]"
         onClick={close}
         aria-label="Close cart"
       />
-      <aside className="fixed inset-y-0 right-0 z-[60] flex w-full max-w-[440px] flex-col bg-[#fffdf9] p-6 shadow-2xl">
+      <aside className="fixed inset-y-0 right-0 z-[60] flex w-full max-w-[440px] flex-col bg-[#fffdf9] p-6 shadow-2xl animate-[slide-in_220ms_ease-out]">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-black">Your cart</h2>
@@ -933,7 +936,7 @@ function CartDrawer({
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 rounded-full border border-black/10 px-2 py-1">
-                          <button onClick={() => update(i, x.qty - 1)}>
+                          <button onClick={() => update(i, x.qty - 1)} className="transition active:scale-90 hover:text-[#bd562b]">
                             <Icon name="minus" size={13} />
                           </button>
                           <b className="text-[10px]">{x.qty}</b>
@@ -1321,7 +1324,7 @@ function Store({
             >
               <Icon name="cart" size={17} />
               {cart.length > 0 && (
-                <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#e8743c] px-1 text-[9px] font-black text-white">
+                <span key={cart.reduce((s, x) => s + x.qty, 0)} className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#e8743c] px-1 text-[9px] font-black text-white animate-[cart-pop_220ms_ease-out]">
                   {cart.reduce((s, x) => s + x.qty, 0)}
                 </span>
               )}
@@ -1391,7 +1394,7 @@ function Store({
         {filtered.length ? (
           <div className="mt-7 grid grid-cols-2 gap-x-3 gap-y-9 md:grid-cols-3 lg:grid-cols-4">
             {filtered.map((p) => (
-              <article key={p.id} className="group">
+              <article key={p.id} className="group transition duration-200 hover:-translate-y-1">
                 <button
                   onClick={() => go("store", p.id)}
                   className="relative block aspect-[.76] w-full overflow-hidden rounded-2xl bg-[#ecebe5] text-left"
