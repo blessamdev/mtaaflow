@@ -27,7 +27,7 @@ type DemoOrder = {
   created: string;
 };
 
-const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=86`;
+const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=80`;
 const products: Product[] = [
   {
     id: 1,
@@ -757,7 +757,7 @@ function ProductModal({
                   onClick={() => setPhoto(i)}
                   className={`overflow-hidden rounded-xl border-2 ${photo === i ? "border-[#172b25]" : "border-transparent"}`}
                 >
-                  <img src={x} className="h-16 w-14 object-cover object-top" alt="" />
+                  <img src={x} className="h-16 w-14 object-cover object-top" alt="" loading="lazy" />
                 </button>
               ))}
             </div>
